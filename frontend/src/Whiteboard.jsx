@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import * as fabric from "fabric";
 import io from "socket.io-client";
 
-// const socket = io("http://localhost:5000");
-const socket = io("https://colaborative-whiteboard.onrender.com");
+const socket = io("http://localhost:5000");
 const CANVAS_BG_COLOR = "#ffffff";
 
 function Whiteboard({ roomId }) {
   const canvasRef = useRef(null);
   const fabricCanvasRef = useRef(null);
+  const hasLoadedOnceRef = useRef(false); // track if JSON has been applied once
 
   const [color, setColor] = useState("#000000");
   const [brushWidth, setBrushWidth] = useState(4);
@@ -27,22 +27,27 @@ function Whiteboard({ roomId }) {
 
     socket.emit("join-room", roomId);
 
+    // ✅ Load JSON once on room join
     const handleCanvasData = (data) => {
+      if (hasLoadedOnceRef.current || !canvas) return;
+
       canvas.loadFromJSON(data, () => {
         canvas.backgroundColor = CANVAS_BG_COLOR;
-        canvas.isDrawingMode = true;
-        canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
-        canvas.freeDrawingBrush.color = mode === "erase" ? CANVAS_BG_COLOR : color;
-        canvas.freeDrawingBrush.width = brushWidth;
         canvas.renderAll();
+        hasLoadedOnceRef.current = true;
       });
     };
 
     socket.on("canvas-data", handleCanvasData);
 
+    // ✅ Debounce draw updates
+    let saveTimeout;
     canvas.on("path:created", () => {
-      const json = canvas.toJSON();
-      socket.emit("canvas-data", json);
+      clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(() => {
+        const json = canvas.toJSON();
+        socket.emit("canvas-data", json);
+      }, 300); // only send after 300ms idle
     });
 
     return () => {
@@ -54,6 +59,11 @@ function Whiteboard({ roomId }) {
   useEffect(() => {
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
+
+    if (!canvas.freeDrawingBrush) {
+      canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+    }
+
     canvas.freeDrawingBrush.color = mode === "erase" ? CANVAS_BG_COLOR : color;
     canvas.freeDrawingBrush.width = brushWidth;
   }, [color, brushWidth, mode]);
@@ -63,13 +73,14 @@ function Whiteboard({ roomId }) {
     if (canvas) {
       canvas.clear();
       canvas.backgroundColor = CANVAS_BG_COLOR;
+      hasLoadedOnceRef.current = false; // allow reloading if clearing
       socket.emit("canvas-data", canvas.toJSON());
     }
   };
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      {/*  Nav Bar */}
+      {/* Nav Bar */}
       <div className="sticky top-0 z-10 flex items-center justify-between bg-gray-900 px-6 py-4 shadow-md">
         <h2 className="text-white text-xl font-semibold tracking-wide">
           Collaborative Whiteboard | Room: {roomId}
@@ -134,7 +145,7 @@ function Whiteboard({ roomId }) {
         ref={canvasRef}
         width={window.innerWidth}
         height={window.innerHeight - 80}
-        className="block "
+        className="block"
       />
     </div>
   );
