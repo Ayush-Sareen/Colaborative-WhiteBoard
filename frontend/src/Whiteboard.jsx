@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import * as fabric from "fabric";
 import io from "socket.io-client";
 
-const socket = io("http://localhost:5000");
+// const socket = io("http://localhost:5000");
+const socket = io("https://colaborative-whiteboard.onrender.com");
 const CANVAS_BG_COLOR = "#ffffff";
 
 function Whiteboard({ roomId }) {
