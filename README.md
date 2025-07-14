@@ -31,7 +31,7 @@ A real-time collaborative whiteboard built with **React**, **Socket.io**, and **
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/Ayush-Sareen/Colaborative-WhiteBoard.git
+git clone https://github.com/Ayush-Sareen/VisionPad.git
 cd collaborative-whiteboard
 ```
 2. Install dependencies
