@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import * as fabric from "fabric";
 import io from "socket.io-client";
 
-const socket = io("http://localhost:5000");
+// const socket = io("http://localhost:5000");
+const socket = io("https://colaborative-whiteboard.onrender.com");
 const CANVAS_BG_COLOR = "#ffffff";
 
 function Whiteboard({ roomId }) {
@@ -29,14 +30,20 @@ function Whiteboard({ roomId }) {
 
     // ✅ Load JSON once on room join
     const handleCanvasData = (data) => {
-      if (hasLoadedOnceRef.current || !canvas) return;
+  const canvas = fabricCanvasRef.current;
+  if (!canvas) return;
 
-      canvas.loadFromJSON(data, () => {
-        canvas.backgroundColor = CANVAS_BG_COLOR;
-        canvas.renderAll();
-        hasLoadedOnceRef.current = true;
-      });
-    };
+  canvas.loadFromJSON(data, () => {
+    canvas.backgroundColor = CANVAS_BG_COLOR;
+    canvas.renderAll();
+
+    // Ensure brush settings stay consistent
+    canvas.isDrawingMode = true;
+    canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+    canvas.freeDrawingBrush.color = mode === "erase" ? CANVAS_BG_COLOR : color;
+    canvas.freeDrawingBrush.width = brushWidth;
+  });
+};
 
     socket.on("canvas-data", handleCanvasData);
 
